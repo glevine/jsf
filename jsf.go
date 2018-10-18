@@ -15,13 +15,13 @@ func ApplyFilter(q sq.SelectBuilder, filter []byte) (sq.SelectBuilder, error) {
 		return q, errors.New("Failed to unmarshal the filter")
 	}
 
-	fm, ok := f.(map[string]interface{})
+	fa, ok := f.([]interface{})
 	if !ok {
 		return q, errors.New("Invalid filter")
 	}
 
 	root := sq.And{}
-	s, err := applyFilters(root, fm)
+	s, err := applyFilters(root, fa)
 	if err != nil {
 		return q, err
 	}
@@ -30,68 +30,65 @@ func ApplyFilter(q sq.SelectBuilder, filter []byte) (sq.SelectBuilder, error) {
 	return q.Where(root), nil
 }
 
-func applyFilters(s []sq.Sqlizer, fm map[string]interface{}) ([]sq.Sqlizer, error) {
-	for op, value := range fm {
-		ns, err := applyFilter(op, value)
-		if err != nil {
-			return s, err
+func applyFilters(s []sq.Sqlizer, fa []interface{}) ([]sq.Sqlizer, error) {
+	for _, value := range fa {
+		vm, ok := value.(map[string]interface{})
+		if !ok {
+			return nil, errors.New("Must be a map")
 		}
 
-		s = append(s, ns)
+		ns, err := applyFilter(vm)
+		if err != nil {
+			return nil, err
+		}
+
+		s = append(s, ns...)
 	}
 
 	return s, nil
 }
 
-func applyFilter(op string, f interface{}) (sq.Sqlizer, error) {
-	switch op {
-	case "$and":
-		fm, ok := f.([]interface{})
-		if !ok {
-			return nil, errors.New("$and must be an array")
-		}
+func applyFilter(f map[string]interface{}) ([]sq.Sqlizer, error) {
+	var conj []sq.Sqlizer
 
-		and := sq.And{}
-
-		for _, v := range fm {
-			vm, ok := v.(map[string]interface{})
+	for op, value := range f {
+		switch op {
+		case "$and":
+			fa, ok := value.([]interface{})
 			if !ok {
-				return nil, errors.New("$and must be an array of objects")
+				return nil, errors.New("$and must be an array")
 			}
 
-			a, err := applyFilters(and, vm)
+			and := sq.And{}
+			a, err := applyFilters(and, fa)
 			if err != nil {
 				return nil, err
 			}
 			and = a
-		}
-
-		return and, nil
-	case "$or":
-		fm, ok := f.([]interface{})
-		if !ok {
-			return nil, errors.New("$or must be an array")
-		}
-
-		or := sq.Or{}
-
-		for _, v := range fm {
-			vm, ok := v.(map[string]interface{})
+			conj = append(conj, and)
+		case "$or":
+			fa, ok := value.([]interface{})
 			if !ok {
-				return nil, errors.New("$or must be an array of objects")
+				return nil, errors.New("$or must be an array")
 			}
 
-			o, err := applyFilters(or, vm)
+			or := sq.Or{}
+			o, err := applyFilters(or, fa)
 			if err != nil {
 				return nil, err
 			}
 			or = o
+			conj = append(conj, or)
+		default:
+			a, err := applyFieldFilter(op, value)
+			if err != nil {
+				return nil, err
+			}
+			conj = append(conj, a)
 		}
-
-		return or, nil
-	default:
-		return applyFieldFilter(op, f)
 	}
+
+	return conj, nil
 }
 
 func applyFieldFilter(field string, f interface{}) (sq.Sqlizer, error) {
