@@ -12,7 +12,7 @@ func ApplyFilter(q sq.SelectBuilder, filter []byte) (sq.SelectBuilder, error) {
 	var f interface{}
 
 	if err := json.Unmarshal(filter, &f); err != nil {
-		return q, errors.New("Failed to unmarshal the filter")
+		return q, errors.New("The filter must be valid JSON")
 	}
 
 	fa, ok := f.([]interface{})
@@ -84,15 +84,15 @@ func applyFilter(f map[string]interface{}) ([]sq.Sqlizer, error) {
 			if err != nil {
 				return nil, err
 			}
-			conj = append(conj, a)
+			conj = append(conj, a...)
 		}
 	}
 
 	return conj, nil
 }
 
-func applyFieldFilter(field string, f interface{}) (sq.Sqlizer, error) {
-	var and sq.And
+func applyFieldFilter(field string, f interface{}) ([]sq.Sqlizer, error) {
+	var conj []sq.Sqlizer
 
 	fm, ok := f.(map[string]interface{})
 	if !ok {
@@ -102,29 +102,29 @@ func applyFieldFilter(field string, f interface{}) (sq.Sqlizer, error) {
 	for op, v := range fm {
 		switch op {
 		case "$eq":
-			and = append(and, sq.Eq{field: v})
+			conj = append(conj, sq.Eq{field: v})
 		case "$ne":
-			and = append(and, sq.NotEq{field: v})
+			conj = append(conj, sq.NotEq{field: v})
 		case "$gt":
-			and = append(and, sq.Gt{field: v})
+			conj = append(conj, sq.Gt{field: v})
 		case "$gte":
-			and = append(and, sq.GtOrEq{field: v})
+			conj = append(conj, sq.GtOrEq{field: v})
 		case "$lt":
-			and = append(and, sq.Lt{field: v})
+			conj = append(conj, sq.Lt{field: v})
 		case "$lte":
-			and = append(and, sq.LtOrEq{field: v})
+			conj = append(conj, sq.LtOrEq{field: v})
 		case "$isnull":
-			and = append(and, sq.Eq{field: nil})
+			conj = append(conj, sq.Eq{field: nil})
 		case "$isnotnull":
-			and = append(and, sq.NotEq{field: nil})
+			conj = append(conj, sq.NotEq{field: nil})
 		case "$in":
-			and = append(and, sq.Eq{field: v})
+			conj = append(conj, sq.Eq{field: v})
 		case "$notin":
-			and = append(and, sq.NotEq{field: v})
+			conj = append(conj, sq.NotEq{field: v})
 		default:
-			return and, fmt.Errorf("Invalid operand: %v", op)
+			return nil, fmt.Errorf("Invalid operator: %v", op)
 		}
 	}
 
-	return and, nil
+	return conj, nil
 }
