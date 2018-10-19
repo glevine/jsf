@@ -7,98 +7,106 @@ import (
 	sq "github.com/Masterminds/squirrel"
 )
 
+// ApplyFilter transpiles a JSON filter definition onto a SQL query built with the Squirrel SQL builder.
 func ApplyFilter(q sq.SelectBuilder, filter []byte) (sq.SelectBuilder, error) {
-	var f interface{}
+	var f []interface{}
 
 	if err := json.Unmarshal(filter, &f); err != nil {
 		return q, fmt.Errorf("Unrecognizable definition: %v", filter)
 	}
 
-	fa, ok := f.([]interface{})
-	if !ok {
-		return q, fmt.Errorf("Unrecognizable definition: %v (expected []interface{}, %T given)", f, f)
-	}
-
 	root := sq.And{}
-	s, err := applyFilters(root, fa)
+	root, err := applyFilters(root, f)
 	if err != nil {
 		return q, err
 	}
-	root = s
 
 	return q.Where(root), nil
 }
 
-func applyFilters(s []sq.Sqlizer, fa []interface{}) ([]sq.Sqlizer, error) {
-	for _, value := range fa {
-		vm, ok := value.(map[string]interface{})
+// Returns the list of sq.Sqlizers from this segment of the filter definition.
+// The segment should contain an array of filter definitions.
+func applyFilters(root []sq.Sqlizer, filter []interface{}) ([]sq.Sqlizer, error) {
+	for _, v := range filter {
+		def, ok := v.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("Unrecognizable definition: %v (expected map[string]interface{}, %T given)", value, value)
+			return nil, fmt.Errorf("Unrecognizable definition: %v (expected map[string]interface{}, %T given)", v, v)
 		}
 
-		ns, err := applyFilter(vm)
+		// Produce the sq.Sqlizers for the definitions in filter.
+		sqlizers, err := applyFilter(def)
 		if err != nil {
 			return nil, err
 		}
 
-		s = append(s, ns...)
+		// Add the children to the root.
+		root = append(root, sqlizers...)
 	}
 
-	return s, nil
+	return root, nil
 }
 
-func applyFilter(f map[string]interface{}) ([]sq.Sqlizer, error) {
+// Returns the list of sq.Sqlizers from this segment of the filter definition.
+// The segment should contain a map with logical operators or field names as keys.
+func applyFilter(filter map[string]interface{}) ([]sq.Sqlizer, error) {
 	var conj []sq.Sqlizer
 
-	for op, value := range f {
+	for op, f := range filter {
 		switch op {
 		case "$and":
-			fa, ok := value.([]interface{})
-			if !ok {
-				return nil, fmt.Errorf("Unrecognizable definition: %v (expected []interface{}, %T given)", value, value)
-			}
-
+			// Add all filters under the new sub-root sq.And.
 			and := sq.And{}
-			a, err := applyFilters(and, fa)
+			and, err := applyOperatorFilter(and, f)
 			if err != nil {
 				return nil, err
 			}
-			and = a
 			conj = append(conj, and)
 		case "$or":
-			fa, ok := value.([]interface{})
-			if !ok {
-				return nil, fmt.Errorf("Unrecognizable definition: %v (expected []interface{}, %T given)", value, value)
-			}
-
+			// Add all filters under the new sub-root sq.Or.
 			or := sq.Or{}
-			o, err := applyFilters(or, fa)
+			or, err := applyOperatorFilter(or, f)
 			if err != nil {
 				return nil, err
 			}
-			or = o
 			conj = append(conj, or)
 		default:
-			a, err := applyFieldFilter(op, value)
+			// Add all filters for the specified field.
+			sqlizers, err := applyFieldFilter(op, f)
 			if err != nil {
 				return nil, err
 			}
-			conj = append(conj, a...)
+			conj = append(conj, sqlizers...)
 		}
 	}
 
 	return conj, nil
 }
 
-func applyFieldFilter(field string, f interface{}) ([]sq.Sqlizer, error) {
-	var conj []sq.Sqlizer
-
-	fm, ok := f.(map[string]interface{})
+// Returns the list of sq.Sqlizers belonging to the root.
+func applyOperatorFilter(root []sq.Sqlizer, filter interface{}) ([]sq.Sqlizer, error) {
+	f, ok := filter.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("Unrecognizable definition: %v (expected map[string]interface{}, %T given)", f, f)
+		return nil, fmt.Errorf("Unrecognizable definition: %v (expected []interface{}, %T given)", filter, filter)
 	}
 
-	for op, v := range fm {
+	sqlizers, err := applyFilters(root, f)
+	if err != nil {
+		return nil, err
+	}
+
+	return sqlizers, nil
+}
+
+// Returns the list of sq.Sqlizers that filter on the field.
+func applyFieldFilter(field string, filter interface{}) ([]sq.Sqlizer, error) {
+	var conj []sq.Sqlizer
+
+	f, ok := filter.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Unrecognizable definition: %v (expected map[string]interface{}, %T given)", filter, filter)
+	}
+
+	for op, v := range f {
 		switch op {
 		case "$eq":
 			conj = append(conj, sq.Eq{field: v})

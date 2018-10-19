@@ -1,12 +1,37 @@
 package jsf_test
 
 import (
+	"fmt"
 	"testing"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/glevine/jsf"
 	"github.com/stretchr/testify/assert"
 )
+
+func ExampleApplyFilter() {
+	filter := []byte(`[{"$or":[{"first_name":{"$eq":"Tim"}},{"last_name":{"$eq":"Wolf"}},{"home_phone":{"$eq":"919-821-3220"}},{"$and":[{"city":{"$eq":"Chicago"}},{"zip":{"$eq":"12345"}},{"$or":[{"state":{"$eq":"California"}},{"state":{"$eq":"Wisconsin"}},{"$and":[{"postal_code":{"$eq":"21121"}},{"street":{"$eq":"Baker Street"}}]}]}]}]}]`)
+	q := sq.Select("first_name", "last_name").From("db")
+
+	q, err := jsf.ApplyFilter(q, filter)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	sql, args, err := q.ToSql()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(sql)
+	fmt.Println(args)
+
+	// Output:
+	// SELECT first_name, last_name FROM db WHERE ((first_name = ? OR last_name = ? OR home_phone = ? OR (city = ? AND zip = ? AND (state = ? OR state = ? OR (postal_code = ? AND street = ?)))))
+	// [Tim Wolf 919-821-3220 Chicago 12345 California Wisconsin 21121 Baker Street]
+}
 
 func TestEquals(t *testing.T) {
 	filter := []byte(`[{"MovieName":{"$eq": "Godzilla"}}]`)
@@ -160,19 +185,6 @@ func TestOr(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "SELECT * FROM db WHERE ((ReleaseDate = ? OR Rating = ?))", sql)
 	assert.Equal(t, []interface{}{"2018-10-18", "PG"}, args)
-}
-
-func TestAndOrWithDeepNesting(t *testing.T) {
-	filter := []byte(`[{"$or":[{"first_name":{"$eq":"Tim"}},{"last_name":{"$eq":"Wolf"}},{"home_phone":{"$eq":"919-821-3220"}},{"$and":[{"city":{"$eq":"Chicago"}},{"zip":{"$eq":"12345"}},{"$or":[{"state":{"$eq":"California"}},{"state":{"$eq":"Wisconsin"}},{"$and":[{"postal_code":{"$eq":"21121"}},{"street":{"$eq":"Baker Street"}}]}]}]}]}]`)
-	q := sq.Select("*").From("db")
-
-	q, err := jsf.ApplyFilter(q, filter)
-	assert.NoError(t, err)
-
-	sql, args, err := q.ToSql()
-	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM db WHERE ((first_name = ? OR last_name = ? OR home_phone = ? OR (city = ? AND zip = ? AND (state = ? OR state = ? OR (postal_code = ? AND street = ?)))))", sql)
-	assert.Equal(t, []interface{}{"Tim", "Wolf", "919-821-3220", "Chicago", "12345", "California", "Wisconsin", "21121", "Baker Street"}, args)
 }
 
 func TestMapWithMoreThanOneKey(t *testing.T) {
