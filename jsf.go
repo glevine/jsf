@@ -108,9 +108,9 @@ func applyFieldFilter(field string, filter interface{}) ([]sq.Sqlizer, error) {
 
 	for op, v := range f {
 		switch op {
-		case "$eq":
+		case "$equals":
 			conj = append(conj, sq.Eq{field: v})
-		case "$ne":
+		case "$not_equals":
 			conj = append(conj, sq.NotEq{field: v})
 		case "$gt":
 			conj = append(conj, sq.Gt{field: v})
@@ -120,13 +120,13 @@ func applyFieldFilter(field string, filter interface{}) ([]sq.Sqlizer, error) {
 			conj = append(conj, sq.Lt{field: v})
 		case "$lte":
 			conj = append(conj, sq.LtOrEq{field: v})
-		case "$isnull":
+		case "$is_null":
 			conj = append(conj, sq.Eq{field: nil})
-		case "$isnotnull":
+		case "$not_null":
 			conj = append(conj, sq.NotEq{field: nil})
 		case "$in":
 			conj = append(conj, sq.Eq{field: v})
-		case "$notin":
+		case "$not_in":
 			conj = append(conj, sq.NotEq{field: v})
 		default:
 			return nil, fmt.Errorf("Unknown operator: %v", op)

@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleApplyFilter() {
-	filter := []byte(`[{"$or":[{"first_name":{"$eq":"Tim"}},{"last_name":{"$eq":"Wolf"}},{"home_phone":{"$eq":"919-821-3220"}},{"$and":[{"city":{"$eq":"Chicago"}},{"zip":{"$eq":"12345"}},{"$or":[{"state":{"$eq":"California"}},{"state":{"$eq":"Wisconsin"}},{"$and":[{"postal_code":{"$eq":"21121"}},{"street":{"$eq":"Baker Street"}}]}]}]}]}]`)
+	filter := []byte(`[{"$or":[{"first_name":{"$equals":"Tim"}},{"last_name":{"$equals":"Wolf"}},{"home_phone":{"$equals":"919-821-3220"}},{"$and":[{"city":{"$equals":"Chicago"}},{"zip":{"$equals":"12345"}},{"$or":[{"state":{"$equals":"California"}},{"state":{"$equals":"Wisconsin"}},{"$and":[{"postal_code":{"$equals":"21121"}},{"street":{"$equals":"Baker Street"}}]}]}]}]}]`)
 	q := sq.Select("first_name", "last_name").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -34,7 +34,7 @@ func ExampleApplyFilter() {
 }
 
 func TestEquals(t *testing.T) {
-	filter := []byte(`[{"MovieName":{"$eq": "Godzilla"}}]`)
+	filter := []byte(`[{"MovieName":{"$equals": "Godzilla"}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -47,7 +47,7 @@ func TestEquals(t *testing.T) {
 }
 
 func TestNotEquals(t *testing.T) {
-	filter := []byte(`[{"ActressName":{"$ne": "Johny"}}]`)
+	filter := []byte(`[{"ActressName":{"$not_equals": "Johny"}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -112,7 +112,7 @@ func TestLessThanOrEqualTo(t *testing.T) {
 }
 
 func TestIsNull(t *testing.T) {
-	filter := []byte(`[{"ReleaseDate":{"$isnull": true}}]`)
+	filter := []byte(`[{"ReleaseDate":{"$is_null": true}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -124,7 +124,7 @@ func TestIsNull(t *testing.T) {
 }
 
 func TestIsNotNull(t *testing.T) {
-	filter := []byte(`[{"ReleaseDate":{"$isnotnull": true}}]`)
+	filter := []byte(`[{"ReleaseDate":{"$not_null": true}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -149,7 +149,7 @@ func TestIn(t *testing.T) {
 }
 
 func TestNotIn(t *testing.T) {
-	filter := []byte(`[{"ActressName":{"$notin": ["Jamie", "Johnny"]}}]`)
+	filter := []byte(`[{"ActressName":{"$not_in": ["Jamie", "Johnny"]}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -162,7 +162,7 @@ func TestNotIn(t *testing.T) {
 }
 
 func TestAnd(t *testing.T) {
-	filter := []byte(`[{"$and":[{"ReleaseDate":{"$eq":"2018-10-18"}},{"Rating":{"$eq":"PG"}}]}]`)
+	filter := []byte(`[{"$and":[{"ReleaseDate":{"$equals":"2018-10-18"}},{"Rating":{"$equals":"PG"}}]}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -175,7 +175,7 @@ func TestAnd(t *testing.T) {
 }
 
 func TestOr(t *testing.T) {
-	filter := []byte(`[{"$or":[{"ReleaseDate":{"$eq":"2018-10-18"},"Rating":{"$eq":"PG"}}]}]`)
+	filter := []byte(`[{"$or":[{"ReleaseDate":{"$equals":"2018-10-18"},"Rating":{"$equals":"PG"}}]}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -188,7 +188,7 @@ func TestOr(t *testing.T) {
 }
 
 func TestMapWithMoreThanOneKey(t *testing.T) {
-	filter := []byte(`[{"first_name":{"$eq":"Tim"}},{"last_name":{"$eq":"Wolf"}}]`)
+	filter := []byte(`[{"first_name":{"$equals":"Tim"}},{"last_name":{"$equals":"Wolf"}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -214,7 +214,7 @@ func TestNestedMapWithMoreThanOneFieldOperator(t *testing.T) {
 }
 
 func TestNestedMapWithMoreThanOneLogicalOperator(t *testing.T) {
-	filter := []byte(`[{"$or":[{"first_name":{"$eq":"Tim"}},{"last_name":{"$eq":"Wolf"}},{"home_phone":{"$eq":"919-821-3220"}},{"$and":[{"city":{"$eq":"Chicago"}},{"zip":{"$eq":"12345"}}],"$or":[{"state":{"$eq":"California"}},{"state":{"$eq":"Wisconsin"}},{"$and":[{"postal_code":{"$eq":"21121"}},{"street":{"$eq":"Baker Street"}}]}]}]}]`)
+	filter := []byte(`[{"$or":[{"first_name":{"$equals":"Tim"}},{"last_name":{"$equals":"Wolf"}},{"home_phone":{"$equals":"919-821-3220"}},{"$and":[{"city":{"$equals":"Chicago"}},{"zip":{"$equals":"12345"}}],"$or":[{"state":{"$equals":"California"}},{"state":{"$equals":"Wisconsin"}},{"$and":[{"postal_code":{"$equals":"21121"}},{"street":{"$equals":"Baker Street"}}]}]}]}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
