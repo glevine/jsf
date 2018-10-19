@@ -2,7 +2,6 @@ package jsf
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
@@ -12,12 +11,12 @@ func ApplyFilter(q sq.SelectBuilder, filter []byte) (sq.SelectBuilder, error) {
 	var f interface{}
 
 	if err := json.Unmarshal(filter, &f); err != nil {
-		return q, errors.New("The filter must be valid JSON")
+		return q, fmt.Errorf("Unrecognizable definition: %v", filter)
 	}
 
 	fa, ok := f.([]interface{})
 	if !ok {
-		return q, errors.New("Invalid filter")
+		return q, fmt.Errorf("Unrecognizable definition: %v (expected []interface{}, %T given)", f, f)
 	}
 
 	root := sq.And{}
@@ -34,7 +33,7 @@ func applyFilters(s []sq.Sqlizer, fa []interface{}) ([]sq.Sqlizer, error) {
 	for _, value := range fa {
 		vm, ok := value.(map[string]interface{})
 		if !ok {
-			return nil, errors.New("Must be a map")
+			return nil, fmt.Errorf("Unrecognizable definition: %v (expected map[string]interface{}, %T given)", value, value)
 		}
 
 		ns, err := applyFilter(vm)
@@ -56,7 +55,7 @@ func applyFilter(f map[string]interface{}) ([]sq.Sqlizer, error) {
 		case "$and":
 			fa, ok := value.([]interface{})
 			if !ok {
-				return nil, errors.New("$and must be an array")
+				return nil, fmt.Errorf("Unrecognizable definition: %v (expected []interface{}, %T given)", value, value)
 			}
 
 			and := sq.And{}
@@ -69,7 +68,7 @@ func applyFilter(f map[string]interface{}) ([]sq.Sqlizer, error) {
 		case "$or":
 			fa, ok := value.([]interface{})
 			if !ok {
-				return nil, errors.New("$or must be an array")
+				return nil, fmt.Errorf("Unrecognizable definition: %v (expected []interface{}, %T given)", value, value)
 			}
 
 			or := sq.Or{}
@@ -96,7 +95,7 @@ func applyFieldFilter(field string, f interface{}) ([]sq.Sqlizer, error) {
 
 	fm, ok := f.(map[string]interface{})
 	if !ok {
-		return nil, errors.New("Could not parse the filter")
+		return nil, fmt.Errorf("Unrecognizable definition: %v (expected map[string]interface{}, %T given)", f, f)
 	}
 
 	for op, v := range fm {
@@ -122,7 +121,7 @@ func applyFieldFilter(field string, f interface{}) ([]sq.Sqlizer, error) {
 		case "$notin":
 			conj = append(conj, sq.NotEq{field: v})
 		default:
-			return nil, fmt.Errorf("Invalid operator: %v", op)
+			return nil, fmt.Errorf("Unknown operator: %v", op)
 		}
 	}
 
