@@ -10,6 +10,10 @@ import (
 
 // ApplyFilter transpiles a JSON filter definition onto a SQL query built with the Squirrel SQL builder.
 func ApplyFilter(q sq.SelectBuilder, filter []byte) (sq.SelectBuilder, error) {
+	if len(filter) == 0 {
+		return q, nil
+	}
+
 	var f []interface{}
 
 	if err := json.Unmarshal(filter, &f); err != nil {

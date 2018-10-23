@@ -33,6 +33,17 @@ func ExampleApplyFilter() {
 	// [Godzilla R 2000-01-01 Harrison Ford Tom Cruise 2000-01-01 A Few Good Men Demi Moore]
 }
 
+func TestNoFilter(t *testing.T) {
+	filter := []byte("")
+	q := sq.Select("*").From("db")
+	q, err := jsf.ApplyFilter(q, filter)
+	assert.NoError(t, err)
+	sql, args, err := q.ToSql()
+	assert.NoError(t, err)
+	assert.Equal(t, "SELECT * FROM db", sql)
+	assert.Empty(t, args)
+}
+
 func TestEquals(t *testing.T) {
 	filter := []byte(`[{"MovieName":{"$equals":"Godzilla"}}]`)
 	q := sq.Select("*").From("db")
