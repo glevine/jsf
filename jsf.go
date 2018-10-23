@@ -133,9 +133,9 @@ func applyFieldFilter(field string, filter interface{}) ([]sq.Sqlizer, error) {
 			case "$lte":
 				conj = append(conj, sq.LtOrEq{field: v})
 			case "$not_equals":
-				conj = append(conj, sq.NotEq{field: v})
+				conj = append(conj, sq.Or{sq.NotEq{field: v}, sq.Eq{field: nil}})
 			case "$not_in":
-				conj = append(conj, sq.NotEq{field: v})
+				conj = append(conj, sq.Or{sq.NotEq{field: v}, sq.Eq{field: nil}})
 			case "$not_null":
 				conj = append(conj, sq.NotEq{field: nil})
 			default:

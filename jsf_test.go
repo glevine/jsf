@@ -66,7 +66,7 @@ func TestNotEquals(t *testing.T) {
 
 	sql, args, err := q.ToSql()
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM db WHERE (MovieName <> ?)", sql)
+	assert.Equal(t, "SELECT * FROM db WHERE ((MovieName <> ? OR MovieName IS NULL))", sql)
 	assert.Equal(t, []interface{}{"Godzilla"}, args)
 }
 
@@ -168,7 +168,7 @@ func TestNotIn(t *testing.T) {
 
 	sql, args, err := q.ToSql()
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM db WHERE (MovieName NOT IN (?,?))", sql)
+	assert.Equal(t, "SELECT * FROM db WHERE ((MovieName NOT IN (?,?) OR MovieName IS NULL))", sql)
 	assert.Equal(t, []interface{}{"Godzilla", "King Kong vs. Godzilla"}, args)
 }
 
@@ -255,7 +255,7 @@ func TestUnknownOperator(t *testing.T) {
 func TestUnrecognizableDefinition(t *testing.T) {
 	for _, filter := range map[string]string{
 		"Not JSON":                            "value",
-		"Must surrounded by an array":         `{"$and":[{"field":{"$eq":"value"}}]}`,
+		"Must be surrounded by an array":      `{"$and":[{"field":{"$eq":"value"}}]}`,
 		"Array elements must be objects":      `["value"]`,
 		"Array elements can't be more arrays": `[["value"]]`,
 		"$and/$or keys must have arrays":      `[{"$and":{"$or":[{"field":{"$eq":"value"}}]}}]`,
