@@ -10,8 +10,8 @@ import (
 )
 
 func ExampleApplyFilter() {
-	filter := []byte(`[{"$or":[{"first_name":{"$equals":"Tim"}},{"last_name":{"$equals":"Wolf"}},{"home_phone":{"$equals":"919-821-3220"}},{"$and":[{"city":{"$equals":"Chicago"}},{"zip":{"$equals":"12345"}},{"$or":[{"state":{"$equals":"California"}},{"state":{"$equals":"Wisconsin"}},{"$and":[{"postal_code":{"$equals":"21121"}},{"street":{"$equals":"Baker Street"}}]}]}]}]}]`)
-	q := sq.Select("first_name", "last_name").From("db")
+	filter := []byte(`[{"$or":[{"MovieName":{"$equals":"Godzilla"}},{"Rating":{"$equals":"R"}},{"ReleaseDate":{"$gt":"2000-01-01"}},{"$and":[{"PlotSummary":{"$not_null":true}},{"LeadActor":{"$equals":"Harrison Ford"}},{"$or":[{"LeadActor":{"$equals":"Tom Cruise"}},{"ReleaseDate":{"$lte":"2000-01-01"}},{"$and":[{"MovieName":{"$equals":"A Few Good Men"}},{"LeadActress":{"$equals":"Demi Moore"}}]}]}]}]}]`)
+	q := sq.Select("MovieName", "Rating").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
 	if err != nil {
@@ -29,12 +29,12 @@ func ExampleApplyFilter() {
 	fmt.Println(args)
 
 	// Output:
-	// SELECT first_name, last_name FROM db WHERE ((first_name = ? OR last_name = ? OR home_phone = ? OR (city = ? AND zip = ? AND (state = ? OR state = ? OR (postal_code = ? AND street = ?)))))
-	// [Tim Wolf 919-821-3220 Chicago 12345 California Wisconsin 21121 Baker Street]
+	// SELECT MovieName, Rating FROM db WHERE ((MovieName = ? OR Rating = ? OR ReleaseDate > ? OR (PlotSummary IS NOT NULL AND LeadActor = ? AND (LeadActor = ? OR ReleaseDate <= ? OR (MovieName = ? AND LeadActress = ?)))))
+	// [Godzilla R 2000-01-01 Harrison Ford Tom Cruise 2000-01-01 A Few Good Men Demi Moore]
 }
 
 func TestEquals(t *testing.T) {
-	filter := []byte(`[{"MovieName":{"$equals": "Godzilla"}}]`)
+	filter := []byte(`[{"MovieName":{"$equals":"Godzilla"}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -47,7 +47,7 @@ func TestEquals(t *testing.T) {
 }
 
 func TestNotEquals(t *testing.T) {
-	filter := []byte(`[{"ActressName":{"$not_equals": "Johny"}}]`)
+	filter := []byte(`[{"MovieName":{"$not_equals":"Godzilla"}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -55,12 +55,12 @@ func TestNotEquals(t *testing.T) {
 
 	sql, args, err := q.ToSql()
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM db WHERE (ActressName <> ?)", sql)
-	assert.Equal(t, []interface{}{"Johny"}, args)
+	assert.Equal(t, "SELECT * FROM db WHERE (MovieName <> ?)", sql)
+	assert.Equal(t, []interface{}{"Godzilla"}, args)
 }
 
 func TestGreaterThan(t *testing.T) {
-	filter := []byte(`[{"ReleaseDate":{"$gt": "2018-10-18"}}]`)
+	filter := []byte(`[{"ReleaseDate":{"$gt":"2018-10-18"}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -73,7 +73,7 @@ func TestGreaterThan(t *testing.T) {
 }
 
 func TestGreaterThanOrEqualTo(t *testing.T) {
-	filter := []byte(`[{"ReleaseDate":{"$gte": "2018-10-18"}}]`)
+	filter := []byte(`[{"ReleaseDate":{"$gte":"2018-10-18"}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -86,7 +86,7 @@ func TestGreaterThanOrEqualTo(t *testing.T) {
 }
 
 func TestLessThan(t *testing.T) {
-	filter := []byte(`[{"ReleaseDate":{"$lt": "2018-10-18"}}]`)
+	filter := []byte(`[{"ReleaseDate":{"$lt":"2018-10-18"}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -99,7 +99,7 @@ func TestLessThan(t *testing.T) {
 }
 
 func TestLessThanOrEqualTo(t *testing.T) {
-	filter := []byte(`[{"ReleaseDate":{"$lte": "2018-10-18"}}]`)
+	filter := []byte(`[{"ReleaseDate":{"$lte":"2018-10-18"}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -112,7 +112,7 @@ func TestLessThanOrEqualTo(t *testing.T) {
 }
 
 func TestIsNull(t *testing.T) {
-	filter := []byte(`[{"ReleaseDate":{"$is_null": true}}]`)
+	filter := []byte(`[{"PlotSummary":{"$is_null":true}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -120,11 +120,11 @@ func TestIsNull(t *testing.T) {
 
 	sql, _, err := q.ToSql()
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM db WHERE (ReleaseDate IS NULL)", sql)
+	assert.Equal(t, "SELECT * FROM db WHERE (PlotSummary IS NULL)", sql)
 }
 
 func TestIsNotNull(t *testing.T) {
-	filter := []byte(`[{"ReleaseDate":{"$not_null": true}}]`)
+	filter := []byte(`[{"PlotSummary":{"$not_null":true}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -132,11 +132,11 @@ func TestIsNotNull(t *testing.T) {
 
 	sql, _, err := q.ToSql()
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM db WHERE (ReleaseDate IS NOT NULL)", sql)
+	assert.Equal(t, "SELECT * FROM db WHERE (PlotSummary IS NOT NULL)", sql)
 }
 
 func TestIn(t *testing.T) {
-	filter := []byte(`[{"ActressName":{"$in": ["Jamie", "Johnny"]}}]`)
+	filter := []byte(`[{"MovieName":{"$in":["Godzilla","King Kong vs. Godzilla"]}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -144,12 +144,12 @@ func TestIn(t *testing.T) {
 
 	sql, args, err := q.ToSql()
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM db WHERE (ActressName IN (?,?))", sql)
-	assert.Equal(t, []interface{}{"Jamie", "Johnny"}, args)
+	assert.Equal(t, "SELECT * FROM db WHERE (MovieName IN (?,?))", sql)
+	assert.Equal(t, []interface{}{"Godzilla", "King Kong vs. Godzilla"}, args)
 }
 
 func TestNotIn(t *testing.T) {
-	filter := []byte(`[{"ActressName":{"$not_in": ["Jamie", "Johnny"]}}]`)
+	filter := []byte(`[{"MovieName":{"$not_in":["Godzilla","King Kong vs. Godzilla"]}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -157,8 +157,8 @@ func TestNotIn(t *testing.T) {
 
 	sql, args, err := q.ToSql()
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM db WHERE (ActressName NOT IN (?,?))", sql)
-	assert.Equal(t, []interface{}{"Jamie", "Johnny"}, args)
+	assert.Equal(t, "SELECT * FROM db WHERE (MovieName NOT IN (?,?))", sql)
+	assert.Equal(t, []interface{}{"Godzilla", "King Kong vs. Godzilla"}, args)
 }
 
 func TestAnd(t *testing.T) {
@@ -175,7 +175,7 @@ func TestAnd(t *testing.T) {
 }
 
 func TestOr(t *testing.T) {
-	filter := []byte(`[{"$or":[{"ReleaseDate":{"$equals":"2018-10-18"},"Rating":{"$equals":"PG"}}]}]`)
+	filter := []byte(`[{"$or":[{"Rating":{"$equals":"PG-13"}},{"Rating":{"$equals":"PG"}}]}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -183,12 +183,12 @@ func TestOr(t *testing.T) {
 
 	sql, args, err := q.ToSql()
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM db WHERE ((ReleaseDate = ? OR Rating = ?))", sql)
-	assert.Equal(t, []interface{}{"2018-10-18", "PG"}, args)
+	assert.Equal(t, "SELECT * FROM db WHERE ((Rating = ? OR Rating = ?))", sql)
+	assert.Equal(t, []interface{}{"PG-13", "PG"}, args)
 }
 
 func TestMapWithMoreThanOneKey(t *testing.T) {
-	filter := []byte(`[{"first_name":{"$equals":"Tim"}},{"last_name":{"$equals":"Wolf"}}]`)
+	filter := []byte(`[{"ReleaseDate":{"$equals":"2018-10-18"}},{"Rating":{"$equals":"PG"}}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -196,12 +196,12 @@ func TestMapWithMoreThanOneKey(t *testing.T) {
 
 	sql, args, err := q.ToSql()
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM db WHERE (first_name = ? AND last_name = ?)", sql)
-	assert.Equal(t, []interface{}{"Tim", "Wolf"}, args)
+	assert.Equal(t, "SELECT * FROM db WHERE (ReleaseDate = ? AND Rating = ?)", sql)
+	assert.Equal(t, []interface{}{"2018-10-18", "PG"}, args)
 }
 
 func TestNestedMapWithMoreThanOneFieldOperator(t *testing.T) {
-	filter := []byte(`[{"$or":[{"ReleaseDate":{"$gt":"2018-10-15","$lt":"2018-10-10"}}]}]`)
+	filter := []byte(`[{"$or":[{"ReleaseDate":{"$gt":"2018-10-10","$lt":"2018-10-18"}}]}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -210,11 +210,11 @@ func TestNestedMapWithMoreThanOneFieldOperator(t *testing.T) {
 	sql, args, err := q.ToSql()
 	assert.NoError(t, err)
 	assert.Equal(t, "SELECT * FROM db WHERE ((ReleaseDate > ? OR ReleaseDate < ?))", sql)
-	assert.Equal(t, []interface{}{"2018-10-15", "2018-10-10"}, args)
+	assert.Equal(t, []interface{}{"2018-10-10", "2018-10-18"}, args)
 }
 
 func TestNestedMapWithMoreThanOneLogicalOperator(t *testing.T) {
-	filter := []byte(`[{"$or":[{"first_name":{"$equals":"Tim"}},{"last_name":{"$equals":"Wolf"}},{"home_phone":{"$equals":"919-821-3220"}},{"$and":[{"city":{"$equals":"Chicago"}},{"zip":{"$equals":"12345"}}],"$or":[{"state":{"$equals":"California"}},{"state":{"$equals":"Wisconsin"}},{"$and":[{"postal_code":{"$equals":"21121"}},{"street":{"$equals":"Baker Street"}}]}]}]}]`)
+	filter := []byte(`[{"$or":[{"MovieName":{"$equals":"Godzilla"}},{"Rating":{"$equals":"R"}},{"ReleaseDate":{"$gt":"2000-01-01"}},{"$and":[{"PlotSummary":{"$not_null":true}},{"LeadActor":{"$equals":"Harrison Ford"}}],"$or":[{"LeadActor":{"$equals":"Tom Cruise"}},{"ReleaseDate":{"$lte":"2000-01-01"}},{"$and":[{"MovieName":{"$equals":"A Few Good Men"}},{"LeadActress":{"$equals":"Demi Moore"}}]}]}]}]`)
 	q := sq.Select("*").From("db")
 
 	q, err := jsf.ApplyFilter(q, filter)
@@ -222,6 +222,42 @@ func TestNestedMapWithMoreThanOneLogicalOperator(t *testing.T) {
 
 	sql, args, err := q.ToSql()
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT * FROM db WHERE ((first_name = ? OR last_name = ? OR home_phone = ? OR (city = ? AND zip = ?) OR (state = ? OR state = ? OR (postal_code = ? AND street = ?))))", sql)
-	assert.Equal(t, []interface{}{"Tim", "Wolf", "919-821-3220", "Chicago", "12345", "California", "Wisconsin", "21121", "Baker Street"}, args)
+	assert.Equal(t, "SELECT * FROM db WHERE ((MovieName = ? OR Rating = ? OR ReleaseDate > ? OR (PlotSummary IS NOT NULL AND LeadActor = ?) OR (LeadActor = ? OR ReleaseDate <= ? OR (MovieName = ? AND LeadActress = ?))))", sql)
+	assert.Equal(t, []interface{}{"Godzilla", "R", "2000-01-01", "Harrison Ford", "Tom Cruise", "2000-01-01", "A Few Good Men", "Demi Moore"}, args)
+}
+
+func TestUnknownOperator(t *testing.T) {
+	for _, lo := range []string{"$and", "$or"} {
+		filter := fmt.Sprintf(`[{"%s":[{"ReleaseDate":{"$equals":"2018-10-18"}},{"Rating":{"$foo":"PG"}}]}]`, lo)
+		q := sq.Select("*").From("db")
+
+		q, err := jsf.ApplyFilter(q, []byte(filter))
+		assert.Error(t, err)
+
+		sql, args, err := q.ToSql()
+		assert.NoError(t, err)
+		assert.Equal(t, "SELECT * FROM db", sql)
+		assert.Empty(t, args)
+	}
+}
+
+func TestUnrecognizableDefinition(t *testing.T) {
+	for _, filter := range map[string]string{
+		"Not JSON":                            "value",
+		"Must surrounded by an array":         `{"$and":[{"field":{"$eq":"value"}}]}`,
+		"Array elements must be objects":      `["value"]`,
+		"Array elements can't be more arrays": `[["value"]]`,
+		"$and/$or keys must have arrays":      `[{"$and":{"$or":[{"field":{"$eq":"value"}}]}}]`,
+		"field key must have an object":       `[{"field":"value"}]`,
+	} {
+		q := sq.Select("*").From("db")
+
+		q, err := jsf.ApplyFilter(q, []byte(filter))
+		assert.Error(t, err)
+
+		sql, args, err := q.ToSql()
+		assert.NoError(t, err)
+		assert.Equal(t, "SELECT * FROM db", sql)
+		assert.Empty(t, args)
+	}
 }
